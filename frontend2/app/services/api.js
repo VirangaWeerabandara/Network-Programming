@@ -1,4 +1,5 @@
-const BASE_URL = "http://localhost:5000";
+const SERVER_IP = process.env.NEXT_PUBLIC_SERVER_IP || "localhost";
+const BASE_URL = `http://${SERVER_IP}:5000`;
 
 export const createRepository = async (repoName) => {
   try {

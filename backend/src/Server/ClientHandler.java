@@ -74,23 +74,23 @@ public class ClientHandler implements Runnable {
         }
     }
     
-private void sendCORSHeaders() {
-    output.println("HTTP/1.1 200 OK");
-    output.println("Access-Control-Allow-Origin: http://localhost:3000");  // Single origin
-    output.println("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-    output.println("Access-Control-Allow-Headers: Content-Type");
-    output.println("Access-Control-Max-Age: 86400");
-    output.println();
-    output.flush();
-}
-    
+    private void sendCORSHeaders() {
+        output.println("HTTP/1.1 200 OK");
+        output.println("Access-Control-Allow-Origin: *");  // Allow all origins
+        output.println("Access-Control-Allow-Methods: POST, GET, OPTIONS");
+        output.println("Access-Control-Allow-Headers: Content-Type");
+        output.println("Access-Control-Max-Age: 86400");
+        output.println();
+        output.flush();
+    }
+        
 private void handleRequest(String jsonBody) {
     try {
         JSONObject jsonCommand = new JSONObject(jsonBody);
         String type = jsonCommand.getString("type");
         
         output.println("HTTP/1.1 200 OK");
-        output.println("Access-Control-Allow-Origin: http://localhost:3000");
+        output.println("Access-Control-Allow-Origin: *");  // Allow all origins
         output.println("Content-Type: application/json");
         output.println();
 

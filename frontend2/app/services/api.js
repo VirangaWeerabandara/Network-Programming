@@ -65,45 +65,6 @@ export const pullChanges = async (repoName) => {
   }
 };
 
-export const getCommitHistory = async () => {
-  try {
-    const response = await fetch("http://localhost:5000/history", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type: "HISTORY",
-      }),
-    });
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error getting history:", error);
-    throw error;
-  }
-};
-
-export const revertToCommit = async (hash) => {
-  try {
-    const response = await fetch("http://localhost:5000/revert", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type: "REVERT",
-        hash: hash,
-      }),
-    });
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error reverting changes:", error);
-    throw error;
-  }
-};
-
 export const getRepositories = async () => {
   try {
     const response = await fetch(`${BASE_URL}/repos`, {
@@ -128,5 +89,45 @@ export const getRepositories = async () => {
   } catch (error) {
     console.error("Error fetching repositories:", error);
     return { success: false, repositories: [], message: error.message };
+  }
+};
+// ... existing code ...
+
+export const getCommitHistory = async (repoName) => {
+  try {
+    const response = await fetch(`${BASE_URL}/history`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "HISTORY",
+        repoName: repoName,
+      }),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching history:", error);
+    return { success: false, message: error.message };
+  }
+};
+
+export const revertToCommit = async (hash, repoName) => {
+  try {
+    const response = await fetch(`${BASE_URL}/revert`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "REVERT",
+        hash: hash,
+        repoName: repoName,
+      }),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error reverting commit:", error);
+    return { success: false, message: error.message };
   }
 };

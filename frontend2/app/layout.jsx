@@ -1,3 +1,5 @@
+import "./globals.css";
+
 export const metadata = {
   title: "Version Control System",
   description: "A simple version control system",
@@ -6,7 +8,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="bg-gray-900">{children}</body>
     </html>
   );
 }

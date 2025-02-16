@@ -1,3 +1,5 @@
+const BASE_URL = "http://localhost:5000";
+
 export const createRepository = async (repoName) => {
   try {
     const response = await fetch("http://localhost:5000/create", {
@@ -22,43 +24,44 @@ export const createRepository = async (repoName) => {
   }
 };
 
-export const commitChanges = async (message, content) => {
+export const commitChanges = async (message, content, selectedRepo) => {
   try {
-    const response = await fetch("http://localhost:5000/commit", {
+    console.log(`Committing to repository: ${selectedRepo}`); // Debug log
+    const response = await fetch(`${BASE_URL}/commit`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         type: "COMMIT",
-        message: message,
-        content: content,
+        message,
+        content,
+        repoName: selectedRepo, // Make sure repoName is being sent
       }),
     });
-
     return await response.json();
   } catch (error) {
     console.error("Error committing changes:", error);
-    throw error;
+    return { success: false, message: error.message };
   }
 };
 
-export const pullChanges = async () => {
+export const pullChanges = async (repoName) => {
   try {
-    const response = await fetch("http://localhost:5000/pull", {
+    const response = await fetch(`${BASE_URL}/pull`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         type: "PULL",
+        repoName,
       }),
     });
-
     return await response.json();
   } catch (error) {
     console.error("Error pulling changes:", error);
-    throw error;
+    return { success: false, content: "", message: error.message };
   }
 };
 
@@ -98,5 +101,32 @@ export const revertToCommit = async (hash) => {
   } catch (error) {
     console.error("Error reverting changes:", error);
     throw error;
+  }
+};
+
+export const getRepositories = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/repos`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "GET_REPOS",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new TypeError("Received non-JSON response");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching repositories:", error);
+    return { success: false, repositories: [], message: error.message };
   }
 };

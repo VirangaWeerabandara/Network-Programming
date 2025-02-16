@@ -4,6 +4,7 @@ import Model.Repository;
 import Model.Commit;
 import java.nio.file.*;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.io.*;
 
 public class VersionControlService {
@@ -58,4 +59,15 @@ public class VersionControlService {
         }
         return null;
     }
+
+    public List<String> getAllRepositories() {
+    File reposDir = new File("repositories");
+    if (!reposDir.exists() || !reposDir.isDirectory()) {
+        return new ArrayList<>();
+    }
+    
+    return Arrays.stream(reposDir.list())
+        .filter(name -> new File("repositories/" + name).isDirectory())
+        .collect(Collectors.toList());
+}
 }

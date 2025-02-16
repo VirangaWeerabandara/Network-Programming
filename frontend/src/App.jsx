@@ -10,7 +10,7 @@ function App() {
     <div className="app-container">
       <h1>Version Control System</h1>
       <CodeEditor code={code} setCode={setCode} />
-      <VersionControl code={code} /> {/* Pass code prop here */}
+      <VersionControl code={code} setCode={setCode} />
       <StatusBar />
     </div>
   );

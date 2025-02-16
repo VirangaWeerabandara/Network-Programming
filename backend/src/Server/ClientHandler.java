@@ -114,10 +114,16 @@ private void handleRequest(String jsonBody) {
                 break;
                 
             case "PULL":
-                String pullRepoName = jsonCommand.getString("repoName"); // Get repo name from request
+                String pullRepoName = jsonCommand.getString("repoName");
                 String currentContent = versionControlService.pullChanges(pullRepoName);
-                response.put("success", true)
-                    .put("content", currentContent);
+                if (currentContent != null) {
+                    response.put("success", true)
+                        .put("content", currentContent);
+                } else {
+                    response.put("success", false)
+                        .put("message", "Failed to pull from repository: " + pullRepoName)
+                        .put("content", "");
+                }
                 break;
 
             case "HISTORY":

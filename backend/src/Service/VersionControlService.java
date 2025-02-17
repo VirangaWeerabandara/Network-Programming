@@ -4,10 +4,27 @@ import Model.Repository;
 import Model.Commit;
 import java.nio.file.*;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 import java.io.*;
 
 public class VersionControlService {
+    private final ExecutorService executorService;
+    private final Map<String, ReentrantLock> repoLocks;
+
+    public VersionControlService() {
+        this.executorService = Executors.newFixedThreadPool(10);
+        this.repoLocks = new ConcurrentHashMap<>();
+    }
+
+    private ReentrantLock getRepoLock(String repoName) {
+        return repoLocks.computeIfAbsent(repoName, k -> new ReentrantLock());
+    }
+
     public boolean createRepository(String repoName) {
         Repository repository = new Repository(repoName);
         return repository.create();
@@ -15,10 +32,27 @@ public class VersionControlService {
     
 
 
-    public boolean commitChanges(String repoName, String branchName, String commitMessage, String content) {
-        Commit commit = new Commit(repoName, branchName, commitMessage, content);
-        return commit.save();
-    }
+    public CompletableFuture<Boolean> commitChangesAsync(String repoName, String branchName, String commitMessage, String content) {
+    return CompletableFuture.supplyAsync(() -> {
+        ReentrantLock lock = getRepoLock(repoName);
+        lock.lock();
+        try {
+            // Ensure the branch exists
+            Path branchPath = Paths.get("repositories", repoName, "branches", branchName);
+            if (!Files.exists(branchPath)) {
+                return false;
+            }
+            
+            Commit commit = new Commit(repoName, branchName, commitMessage, content);
+            return commit.save();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            lock.unlock();
+        }
+    }, executorService);
+}
 
 public String getCommitContent(String repoName, String hash, String branchName) {
     try {
@@ -92,9 +126,26 @@ public List<Map<String, String>> getCommitHistory(String repoName, String branch
     return null;
 }
 
-    public boolean createBranch(String repoName, String branchName) {
-        Repository repository = new Repository(repoName);
-        return repository.createBranch(branchName);
+    public CompletableFuture<Map<String, Object>> createBranchAsync(String repoName, String branchName) {
+        return CompletableFuture.supplyAsync(() -> {
+            ReentrantLock lock = getRepoLock(repoName);
+            lock.lock();
+            try {
+                Repository repository = new Repository(repoName);
+                boolean created = repository.createBranch(branchName);
+                
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", created);
+                if (created) {
+                    result.put("branches", repository.getBranches());
+                    String content = pullChanges(repoName, branchName);
+                    result.put("content", content != null ? content : "");
+                }
+                return result;
+            } finally {
+                lock.unlock();
+            }
+        }, executorService);
     }
 
     public List<String> getBranches(String repoName) {
@@ -111,5 +162,8 @@ public List<Map<String, String>> getCommitHistory(String repoName, String branch
     return Arrays.stream(reposDir.list())
         .filter(name -> new File("repositories/" + name).isDirectory())
         .collect(Collectors.toList());
-}
+    }
+    public void shutdown() {
+        executorService.shutdown();
+    }
 }

@@ -37,13 +37,57 @@ export const commitChanges = async (message, content, repoName, branchName) => {
         message,
         content,
         repoName,
-        branchName: branchName || "master", // Default to master if not specified
+        branchName: branchName || "master",
       }),
     });
-    return await response.json();
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.message || "Failed to commit changes");
+    }
+    return data;
   } catch (error) {
     console.error("Error committing changes:", error);
-    return { success: false, message: error.message };
+    throw error;
+  }
+};
+
+export const createBranch = async (repoName, branchName) => {
+  try {
+    const response = await fetch(`${BASE_URL}/branch`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "CREATE_BRANCH",
+        repoName,
+        branchName,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.message || "Failed to create branch");
+    }
+    return data;
+  } catch (error) {
+    console.error("Error creating branch:", error);
+    throw error;
   }
 };
 
@@ -152,26 +196,6 @@ export const revertToCommit = async (hash, repoName, branchName) => {
     return await response.json();
   } catch (error) {
     console.error("Error reverting commit:", error);
-    return { success: false, message: error.message };
-  }
-};
-
-export const createBranch = async (repoName, branchName) => {
-  try {
-    const response = await fetch(`${BASE_URL}/branch`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type: "CREATE_BRANCH",
-        repoName,
-        branchName,
-      }),
-    });
-    return await response.json();
-  } catch (error) {
-    console.error("Error creating branch:", error);
     return { success: false, message: error.message };
   }
 };

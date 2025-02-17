@@ -107,44 +107,74 @@ private void handleRequest(String jsonBody) {
             case "COMMIT":
                 String content = jsonCommand.getString("content");
                 String message = jsonCommand.getString("message");
-                String commitRepoName = jsonCommand.getString("repoName"); // Get repo name from request
-                boolean committed = versionControlService.commitChanges(commitRepoName, message, content);
+                String commitRepoName = jsonCommand.getString("repoName");
+                String branchName = jsonCommand.getString("branchName");
+                boolean committed = versionControlService.commitChanges(commitRepoName, branchName, message, content);
                 response.put("success", committed)
-                    .put("message", committed ? "Changes committed" : "Failed to commit");
+                    .put("message", committed ? 
+                        "Changes committed to " + commitRepoName + "/" + branchName : 
+                        "Failed to commit");
                 break;
                 
             case "PULL":
                 String pullRepoName = jsonCommand.getString("repoName");
-                String currentContent = versionControlService.pullChanges(pullRepoName);
+                String pullBranchName = jsonCommand.getString("branchName"); // Add this line
+                String currentContent = versionControlService.pullChanges(pullRepoName, pullBranchName); // Fix this line
                 if (currentContent != null) {
                     response.put("success", true)
                         .put("content", currentContent);
                 } else {
                     response.put("success", false)
-                        .put("message", "Failed to pull from repository: " + pullRepoName)
+                        .put("message", "Failed to pull from repository: " + pullRepoName + "/" + pullBranchName)
                         .put("content", "");
                 }
                 break;
 
             case "HISTORY":
-                String historyRepoName = jsonCommand.getString("repoName"); // Get repo name from request
-                List<Map<String, String>> history = versionControlService.getCommitHistory(historyRepoName);
+                String historyRepoName = jsonCommand.getString("repoName");
+                String historyBranchName = jsonCommand.getString("branchName");
+                List<Map<String, String>> history = versionControlService.getCommitHistory(historyRepoName, historyBranchName);
                 response.put("success", true)
                     .put("history", history);
                 break;
 
             case "REVERT":
-                String revertRepoName = jsonCommand.getString("repoName"); // Get repo name from request
+                String revertRepoName = jsonCommand.getString("repoName");
                 String hash = jsonCommand.getString("hash");
-                String revertedContent = versionControlService.revertToCommit(revertRepoName, hash);
+                String revertBranch = jsonCommand.getString("branchName");
+                String revertedContent = versionControlService.revertToCommit(revertRepoName, hash, revertBranch);
                 response.put("success", revertedContent != null)
-                    .put("content", revertedContent);
+                    .put("content", revertedContent != null ? revertedContent : "");
+                break;
+                        
+            case "GET_COMMIT_CONTENT":
+                String getCommitContentRepoName = jsonCommand.getString("repoName");
+                String commitHash = jsonCommand.getString("hash");
+                String commitBranch = jsonCommand.getString("branchName");
+                String commitContent = versionControlService.getCommitContent(getCommitContentRepoName, commitHash, commitBranch);
+                response.put("success", commitContent != null)
+                    .put("content", commitContent != null ? commitContent : "");
                 break;
 
             case "GET_REPOS":
                 List<String> repos = versionControlService.getAllRepositories();
                 response.put("success", true)
                     .put("repositories", repos);
+                break;
+            
+            case "CREATE_BRANCH":
+                String createBranchRepoName = jsonCommand.getString("repoName");
+                String newBranchName = jsonCommand.getString("branchName");  // Changed variable name to avoid conflict
+                boolean branchCreated = versionControlService.createBranch(createBranchRepoName, newBranchName);
+                response.put("success", branchCreated)
+                    .put("message", branchCreated ? "Branch created" : "Failed to create branch");
+                break;
+
+            case "GET_BRANCHES":
+                String getBranchesRepoName = jsonCommand.getString("repoName");
+                List<String> branches = versionControlService.getBranches(getBranchesRepoName);
+                response.put("success", true)
+                    .put("branches", branches);
                 break;
         }
         

@@ -14,70 +14,93 @@ public class VersionControlService {
     }
     
 
-    public boolean commitChanges(String repoName, String commitMessage, String content) {
-        Commit commit = new Commit(repoName, commitMessage, content);
+
+    public boolean commitChanges(String repoName, String branchName, String commitMessage, String content) {
+        Commit commit = new Commit(repoName, branchName, commitMessage, content);
         return commit.save();
     }
 
-public String pullChanges(String repoName) {
-    Path filePath = Paths.get("repositories", repoName, "current.txt");
+public String getCommitContent(String repoName, String hash, String branchName) {
     try {
-        // Check if repository exists
-        if (!Files.exists(Paths.get("repositories", repoName))) {
-            System.err.println("Repository not found: " + repoName);
+        Path versionPath = Paths.get("repositories", repoName, "branches", branchName, "versions", hash + ".txt");
+        if (Files.exists(versionPath)) {
+            return Files.readString(versionPath);
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+    return null;
+}
+
+public List<Map<String, String>> getCommitHistory(String repoName, String branchName) {
+    List<Map<String, String>> history = new ArrayList<>();
+    try {
+        Path logPath = Paths.get("repositories", repoName, "branches", branchName, "commit_log.txt");
+        if (Files.exists(logPath)) {
+            List<String> lines = Files.readAllLines(logPath);
+            for (String line : lines) {
+                String[] parts = line.split("\\|");
+                if (parts.length >= 3) {
+                    Map<String, String> commit = new HashMap<>();
+                    commit.put("timestamp", parts[0]);
+                    commit.put("hash", parts[1]);
+                    commit.put("message", parts[2]);
+                    commit.put("branch", parts.length >= 4 ? parts[3] : branchName);
+                    history.add(commit);
+                }
+            }
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+    return history;
+}
+
+    public String pullChanges(String repoName, String branchName) {
+    Path filePath = Paths.get("repositories", repoName, "branches", branchName, "current.txt");
+    try {
+        if (!Files.exists(filePath)) {
+            if ("master".equals(branchName)) {
+                // Create master branch if it doesn't exist
+                Repository repository = new Repository(repoName);
+                repository.createBranch("master");
+                return "";
+            }
             return null;
         }
-
-        // Check if current.txt exists
-        if (!Files.exists(filePath)) {
-            // Create empty file if it doesn't exist
-            Files.createDirectories(filePath.getParent());
-            Files.write(filePath, "".getBytes());
-            return "";
-        }
-
         return Files.readString(filePath);
     } catch (IOException e) {
-        System.err.println("Error reading from repository: " + repoName);
         e.printStackTrace();
         return null;
     }
 }
 
-    public List<Map<String, String>> getCommitHistory(String repoName) {
-        List<Map<String, String>> history = new ArrayList<>();
+  
+
+    public String revertToCommit(String repoName, String hash, String branchName) {
+    String content = Commit.getVersion(repoName, hash, branchName);
+    if (content != null) {
         try {
-            List<String> lines = Files.readAllLines(
-                Paths.get("repositories/" + repoName + "/commit_log.txt"));
-            for (String line : lines) {
-                String[] parts = line.split("\\|");
-                Map<String, String> commit = new HashMap<>();
-                commit.put("timestamp", parts[0]);
-                commit.put("hash", parts[1]);
-                commit.put("message", parts[2]);
-                history.add(commit);
-            }
+            // Update current content in the specific branch
+            Path currentPath = Paths.get("repositories", repoName, "branches", branchName, "current.txt");
+            Files.write(currentPath, content.getBytes());
+            return content;
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return history;
+    }
+    return null;
+}
+
+    public boolean createBranch(String repoName, String branchName) {
+        Repository repository = new Repository(repoName);
+        return repository.createBranch(branchName);
     }
 
-    public String revertToCommit(String repoName, String hash) {
-        String content = Commit.getVersion(repoName, hash);
-        if (content != null) {
-            try {
-                Files.write(Paths.get("repositories/" + repoName + "/current.txt"), 
-                    content.getBytes());
-                return content;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return null;
+    public List<String> getBranches(String repoName) {
+        Repository repository = new Repository(repoName);
+        return repository.getBranches();
     }
-
-    
 
     public List<String> getAllRepositories() {
     File reposDir = new File("repositories");

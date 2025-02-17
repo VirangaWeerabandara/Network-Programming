@@ -8,6 +8,8 @@ import {
   getRepositories,
   getCommitHistory,
   revertToCommit,
+  getBranches,
+  createBranch,
 } from "../services/api";
 
 export default function VersionControl({ code, setCode }) {
@@ -17,14 +19,30 @@ export default function VersionControl({ code, setCode }) {
   const [repositories, setRepositories] = useState([]);
   const [selectedRepo, setSelectedRepo] = useState("");
   const [commitHistory, setCommitHistory] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState("master");
+  const [newBranchName, setNewBranchName] = useState("");
 
   useEffect(() => {
     loadRepositories();
   }, []);
 
   useEffect(() => {
-    if (selectedRepo) {
+    if (selectedRepo && selectedBranch) {
       loadCommitHistory();
+    }
+  }, [selectedRepo, selectedBranch]);
+
+  useEffect(() => {
+    if (selectedRepo) {
+      loadBranches();
+    }
+  }, [selectedRepo]);
+
+  useEffect(() => {
+    if (selectedRepo) {
+      setSelectedBranch("master");
+      loadBranches();
     }
   }, [selectedRepo]);
 
@@ -38,9 +56,26 @@ export default function VersionControl({ code, setCode }) {
       setStatus("Failed to load repositories");
     }
   };
+
+  const loadBranches = async () => {
+    const response = await getBranches(selectedRepo);
+    if (response.success) {
+      setBranches(response.branches);
+    }
+  };
+
+  const handleCreateBranch = async () => {
+    if (!newBranchName) return;
+    const response = await createBranch(selectedRepo, newBranchName);
+    if (response.success) {
+      await loadBranches();
+      setNewBranchName("");
+    }
+  };
+
   const loadCommitHistory = async () => {
     try {
-      const response = await getCommitHistory(selectedRepo);
+      const response = await getCommitHistory(selectedRepo, selectedBranch);
       if (response.success) {
         setCommitHistory(response.history);
       }
@@ -51,7 +86,7 @@ export default function VersionControl({ code, setCode }) {
 
   const handleRevertCommit = async (hash) => {
     try {
-      const response = await revertToCommit(hash, selectedRepo);
+      const response = await revertToCommit(hash, selectedRepo, selectedBranch);
       if (response.success) {
         setCode(response.content);
         setStatus(`Reverted to commit: ${hash}`);
@@ -62,16 +97,17 @@ export default function VersionControl({ code, setCode }) {
       setStatus(`Failed to revert: ${error.message}`);
     }
   };
+
   const handlePull = async () => {
     if (!selectedRepo) {
       setStatus("Please select a repository first");
       return;
     }
     try {
-      const response = await pullChanges(selectedRepo);
+      const response = await pullChanges(selectedRepo, selectedBranch);
       if (response.success) {
         setCode(response.content || "");
-        setStatus("Successfully pulled latest changes");
+        setStatus(`Successfully pulled latest changes from ${selectedBranch}`);
       } else {
         setStatus("Failed to pull changes");
       }
@@ -114,16 +150,43 @@ export default function VersionControl({ code, setCode }) {
       return;
     }
     try {
-      console.log(`Committing to: ${selectedRepo}`); // Debug log
-      const response = await commitChanges(commitMessage, code, selectedRepo);
+      console.log(`Committing to: ${selectedRepo}/${selectedBranch}`); // Debug log
+      const response = await commitChanges(
+        commitMessage,
+        code,
+        selectedRepo,
+        selectedBranch
+      );
       if (response.success) {
-        setStatus(`Changes committed successfully to ${selectedRepo}`);
+        setStatus(
+          `Changes committed successfully to ${selectedRepo}/${selectedBranch}`
+        );
         setCommitMessage(""); // Clear commit message after successful commit
+        await loadCommitHistory(); // Refresh commit history
       } else {
         setStatus(`Commit failed: ${response.message}`);
       }
     } catch (error) {
       setStatus(`Commit failed: ${error.message}`);
+    }
+  };
+
+  const handleViewCommit = async (hash, e) => {
+    e.stopPropagation(); // Prevent triggering revert
+    try {
+      const response = await getCommitContent(
+        selectedRepo,
+        hash,
+        selectedBranch
+      );
+      if (response.success) {
+        setCode(response.content);
+        setStatus(`Viewing commit: ${hash}`);
+      } else {
+        setStatus("Failed to load commit content");
+      }
+    } catch (error) {
+      setStatus(`Failed to load commit content: ${error.message}`);
     }
   };
 
@@ -184,11 +247,10 @@ export default function VersionControl({ code, setCode }) {
             Commit History
           </p>
           <div className="bg-gray-700 rounded-lg p-4 max-h-60 overflow-y-auto">
-            {commitHistory.map((commit, index) => (
+            {commitHistory.map((commit) => (
               <div
                 key={commit.hash}
                 className="flex items-center justify-between p-2 hover:bg-gray-600 rounded cursor-pointer"
-                onClick={() => handleRevertCommit(commit.hash)}
               >
                 <div className="flex flex-col">
                   <span className="text-white font-mono text-sm">
@@ -201,24 +263,60 @@ export default function VersionControl({ code, setCode }) {
                     {new Date(commit.timestamp).toLocaleString()}
                   </span>
                 </div>
-                <button
-                  className="p-[2px] relative"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRevertCommit(commit.hash);
-                  }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg opacity-75" />
-                  <div className="px-4 py-1 bg-gray-900 rounded-[4px] relative group transition duration-200 text-white hover:bg-transparent text-sm">
-                    View
-                  </div>
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    className="p-[2px] relative"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRevertCommit(commit.hash);
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg opacity-75" />
+                    <div className="px-4 py-1 bg-gray-900 rounded-[4px] relative group transition duration-200 text-white hover:bg-transparent text-sm">
+                      Revert
+                    </div>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
-
+      {selectedRepo && (
+        <div>
+          <p className="text-white text-2xl font-bold font-['Inter'] mb-2">
+            Branches
+          </p>
+          <div className="flex gap-4 mb-4">
+            <select
+              value={selectedBranch}
+              onChange={(e) => setSelectedBranch(e.target.value)}
+              className="flex-1 p-3 rounded-lg bg-gray-700 text-white"
+            >
+              {branches.map((branch) => (
+                <option key={branch} value={branch}>
+                  {branch}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-4">
+            <input
+              type="text"
+              value={newBranchName}
+              onChange={(e) => setNewBranchName(e.target.value)}
+              placeholder="New branch name"
+              className="flex-1 p-3 rounded-lg bg-gray-700 text-white"
+            />
+            <button onClick={handleCreateBranch} className="p-[3px] relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg" />
+              <div className="px-8 py-2 bg-gray-900 rounded-[6px] relative group transition duration-200 text-white hover:bg-transparent">
+                Create Branch
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
       <div>
         <p className="text-white text-2xl font-bold font-['Inter'] mb-2">
           Commit Changes

@@ -25,9 +25,8 @@ export const createRepository = async (repoName) => {
   }
 };
 
-export const commitChanges = async (message, content, selectedRepo) => {
+export const commitChanges = async (message, content, repoName, branchName) => {
   try {
-    console.log(`Committing to repository: ${selectedRepo}`); // Debug log
     const response = await fetch(`${BASE_URL}/commit`, {
       method: "POST",
       headers: {
@@ -37,7 +36,8 @@ export const commitChanges = async (message, content, selectedRepo) => {
         type: "COMMIT",
         message,
         content,
-        repoName: selectedRepo, // Make sure repoName is being sent
+        repoName,
+        branchName: branchName || "master", // Default to master if not specified
       }),
     });
     return await response.json();
@@ -47,7 +47,7 @@ export const commitChanges = async (message, content, selectedRepo) => {
   }
 };
 
-export const pullChanges = async (repoName) => {
+export const pullChanges = async (repoName, branchName = "master") => {
   try {
     const response = await fetch(`${BASE_URL}/pull`, {
       method: "POST",
@@ -57,6 +57,7 @@ export const pullChanges = async (repoName) => {
       body: JSON.stringify({
         type: "PULL",
         repoName,
+        branchName,
       }),
     });
     return await response.json();
@@ -92,9 +93,8 @@ export const getRepositories = async () => {
     return { success: false, repositories: [], message: error.message };
   }
 };
-// ... existing code ...
 
-export const getCommitHistory = async (repoName) => {
+export const getCommitHistory = async (repoName, branchName) => {
   try {
     const response = await fetch(`${BASE_URL}/history`, {
       method: "POST",
@@ -103,17 +103,39 @@ export const getCommitHistory = async (repoName) => {
       },
       body: JSON.stringify({
         type: "HISTORY",
-        repoName: repoName,
+        repoName,
+        branchName,
       }),
     });
     return await response.json();
   } catch (error) {
     console.error("Error fetching history:", error);
-    return { success: false, message: error.message };
+    return { success: false, history: [], message: error.message };
   }
 };
 
-export const revertToCommit = async (hash, repoName) => {
+export const getCommitContent = async (repoName, hash, branchName) => {
+  try {
+    const response = await fetch(`${BASE_URL}/commit-content`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "GET_COMMIT_CONTENT",
+        repoName,
+        hash,
+        branchName,
+      }),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching commit content:", error);
+    return { success: false, content: "", message: error.message };
+  }
+};
+
+export const revertToCommit = async (hash, repoName, branchName) => {
   try {
     const response = await fetch(`${BASE_URL}/revert`, {
       method: "POST",
@@ -122,13 +144,53 @@ export const revertToCommit = async (hash, repoName) => {
       },
       body: JSON.stringify({
         type: "REVERT",
-        hash: hash,
-        repoName: repoName,
+        hash,
+        repoName,
+        branchName,
       }),
     });
     return await response.json();
   } catch (error) {
     console.error("Error reverting commit:", error);
     return { success: false, message: error.message };
+  }
+};
+
+export const createBranch = async (repoName, branchName) => {
+  try {
+    const response = await fetch(`${BASE_URL}/branch`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "CREATE_BRANCH",
+        repoName,
+        branchName,
+      }),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error creating branch:", error);
+    return { success: false, message: error.message };
+  }
+};
+
+export const getBranches = async (repoName) => {
+  try {
+    const response = await fetch(`${BASE_URL}/branches`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "GET_BRANCHES",
+        repoName,
+      }),
+    });
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching branches:", error);
+    return { success: false, branches: [], message: error.message };
   }
 };

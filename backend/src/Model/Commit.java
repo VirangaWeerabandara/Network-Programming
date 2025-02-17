@@ -6,13 +6,15 @@ import java.nio.file.*;
 
 public class Commit {
     private String repoName;
+    private String branchName;
     private String message;
-    private LocalDateTime timestamp;
     private String content;
     private String hash;
+    private LocalDateTime timestamp;
 
-    public Commit(String repoName, String message, String content) {
+    public Commit(String repoName, String branchName, String message, String content) {
         this.repoName = repoName;
+        this.branchName = branchName;
         this.message = message;
         this.content = content;
         this.timestamp = LocalDateTime.now();
@@ -23,29 +25,24 @@ public class Commit {
         return timestamp.toString().replace(":", "-") + "-" + Math.abs(content.hashCode());
     }
 
-    public boolean save() {
+        public boolean save() {
         try {
-            // Create repository directory if it doesn't exist
-            String repoPath = "repositories/" + repoName;
-            Files.createDirectories(Paths.get(repoPath));
-
-            // Save the content in versions directory
-            String versionPath = repoPath + "/versions";
-            Files.createDirectories(Paths.get(versionPath));
+            String branchPath = "repositories/" + repoName + "/branches/" + branchName;
+            String versionPath = branchPath + "/versions";
             
-            // Save the content with commit hash
+            // Save version
             String contentPath = versionPath + "/" + hash + ".txt";
             Files.write(Paths.get(contentPath), content.getBytes());
 
-            // Update commit log
-            String logPath = repoPath + "/commit_log.txt";
-            String logEntry = String.format("%s|%s|%s|%s\n", 
-                timestamp, hash, message, contentPath);
+            // Update log
+            String logPath = branchPath + "/commit_log.txt";
+            String logEntry = String.format("%s|%s|%s|%s|%s\n", 
+                timestamp, hash, message, branchName, contentPath);
             Files.write(Paths.get(logPath), logEntry.getBytes(), 
                 StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 
-            // Update current version
-            Files.write(Paths.get(repoPath + "/current.txt"), content.getBytes());
+            // Update current
+            Files.write(Paths.get(branchPath + "/current.txt"), content.getBytes());
 
             return true;
         } catch (IOException e) {
@@ -54,15 +51,17 @@ public class Commit {
         }
     }
 
-    public static String getVersion(String repoName, String hash) {
+    public static String getVersion(String repoName, String hash, String branchName) {
         try {
-            String versionPath = "repositories/" + repoName + "/versions/" + hash + ".txt";
+            String versionPath = "repositories/" + repoName + "/branches/" + branchName + "/versions/" + hash + ".txt";
             return Files.readString(Paths.get(versionPath));
         } catch (IOException e) {
             e.printStackTrace();
             return null;
         }
     }
+
+    
 
     public String getRepoName() {
         return repoName;

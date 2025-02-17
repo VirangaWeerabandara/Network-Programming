@@ -18,9 +18,6 @@ export default function Home() {
           <div className="w-4/5 h-[92vh] bg-gray-800 rounded-xl p-4 shadow-xl">
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xl font-bold text-white">Code Editor</h2>
-              <div className="px-3 py-1 bg-gray-700 rounded-lg text-gray-300 text-sm">
-                JavaScript
-              </div>
             </div>
             <div className="h-[calc(100%-2.5rem)] rounded-lg overflow-hidden border border-gray-700">
               <CodeEditor code={code} setCode={setCode} />

@@ -36,8 +36,8 @@ const CodeEditor = ({ code, setCode }) => {
     },
     wordWrap: "on",
     mouseWheelZoom: true,
-    lineDecorationsWidth: 8, // Reduce the width of line number area
-    lineNumbersMinChars: 3, // Minimize the space reserved for line numbers
+    lineDecorationsWidth: 8,
+    lineNumbersMinChars: 3,
     readOnly: false,
   };
 

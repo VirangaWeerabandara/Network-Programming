@@ -384,9 +384,6 @@ export default function VersionControl({ code, setCode }) {
                 className="flex items-center justify-between p-2 hover:bg-gray-600 rounded cursor-pointer mb-2"
               >
                 <div className="flex flex-col">
-                  <span className="text-white font-mono text-sm">
-                    {commit.hash.substring(0, 8)}
-                  </span>
                   <span className="text-gray-300 text-sm">
                     {commit.message}
                   </span>

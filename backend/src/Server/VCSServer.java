@@ -39,9 +39,8 @@ public class VCSServer {
      public static void main(String[] args) {
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
 
-        try {
+        try (ServerSocket serverSocket = new ServerSocket(PORT)) {
             // Bind to all network interfaces
-            ServerSocket serverSocket = new ServerSocket(PORT);
             
             // Get all IP addresses
             System.out.println("\nAvailable Network Interfaces:");

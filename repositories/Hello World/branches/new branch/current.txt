@@ -1,4 +1,2 @@
 console.log("Hello, World!");
 console.log("Welcome to programming");
-console.log("Let's code in JavaScript");
-

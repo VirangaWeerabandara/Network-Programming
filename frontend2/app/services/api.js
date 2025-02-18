@@ -54,8 +54,8 @@ export const commitChanges = async (message, content, repoName, branchName) => {
     }
     return data;
   } catch (error) {
-    console.error("Error committing changes:", error);
-    throw error;
+    console.error("Commit error details:", error);
+    throw new Error(`Failed to commit: ${error.message}`);
   }
 };
 

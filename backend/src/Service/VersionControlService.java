@@ -33,26 +33,43 @@ public class VersionControlService {
 
 
     public CompletableFuture<Boolean> commitChangesAsync(String repoName, String branchName, String commitMessage, String content) {
-    return CompletableFuture.supplyAsync(() -> {
-        ReentrantLock lock = getRepoLock(repoName);
-        lock.lock();
-        try {
-            // Ensure the branch exists
-            Path branchPath = Paths.get("repositories", repoName, "branches", branchName);
-            if (!Files.exists(branchPath)) {
+        return CompletableFuture.supplyAsync(() -> {
+            ReentrantLock lock = getRepoLock(repoName);
+            lock.lock();
+            try {
+                System.out.println("Attempting commit for repo: " + repoName + ", branch: " + branchName);
+                
+                // Verify repository exists
+                Path repoPath = Paths.get("repositories", repoName);
+                if (!Files.exists(repoPath)) {
+                    System.err.println("Repository does not exist: " + repoPath);
+                    return false;
+                }
+                
+                // Verify branch exists
+                Path branchPath = Paths.get("repositories", repoName, "branches", branchName);
+                if (!Files.exists(branchPath)) {
+                    System.err.println("Branch does not exist: " + branchPath);
+                    return false;
+                }
+                
+                Commit commit = new Commit(repoName, branchName, commitMessage, content);
+                boolean result = commit.save();
+                
+                if (!result) {
+                    System.err.println("Failed to save commit");
+                }
+                
+                return result;
+            } catch (Exception e) {
+                System.err.println("Error during commit: " + e.getMessage());
+                e.printStackTrace();
                 return false;
+            } finally {
+                lock.unlock();
             }
-            
-            Commit commit = new Commit(repoName, branchName, commitMessage, content);
-            return commit.save();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
-        } finally {
-            lock.unlock();
-        }
-    }, executorService);
-}
+        }, executorService);
+    }
 
 public String getCommitContent(String repoName, String hash, String branchName) {
     try {
@@ -91,23 +108,20 @@ public List<Map<String, String>> getCommitHistory(String repoName, String branch
 }
 
     public String pullChanges(String repoName, String branchName) {
-    Path filePath = Paths.get("repositories", repoName, "branches", branchName, "current.txt");
-    try {
-        if (!Files.exists(filePath)) {
-            if ("master".equals(branchName)) {
-                // Create master branch if it doesn't exist
+        Path filePath = Paths.get("repositories", repoName, "branches", branchName, "current.txt");
+        try {
+            if (!Files.exists(filePath)) {
+                // Create the branch if it doesn't exist, regardless of branch name
                 Repository repository = new Repository(repoName);
-                repository.createBranch("master");
+                repository.createBranch(branchName);
                 return "";
             }
+            return Files.readString(filePath);
+        } catch (IOException e) {
+            e.printStackTrace();
             return null;
         }
-        return Files.readString(filePath);
-    } catch (IOException e) {
-        e.printStackTrace();
-        return null;
     }
-}
 
   
 

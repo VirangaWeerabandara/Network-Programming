@@ -1,0 +1,7 @@
+console.log("Hello, World!");
+console.log("Welcome to programming");
+console.log("Let's code in JavaScript");
+
+for (let i = 1; i <= 5; i++) {
+    console.log(i);
+}

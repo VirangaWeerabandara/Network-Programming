@@ -19,19 +19,35 @@ public class Repository {
     }
 
     public boolean create() {
-        try {
-            // Create main repository directory
-            Files.createDirectories(Paths.get(path));
-            // Create branches directory
-            Files.createDirectories(Paths.get(path, "branches"));
-            // Create main branch (master) - this should always be created first
-            createBranch("master");
-            return true;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
-        }
+    try {
+        // Create main repository directory
+        Path repoPath = Paths.get(path);
+        Files.createDirectories(repoPath);
+        
+        // Create branches directory
+        Path branchesPath = Paths.get(path, "branches");
+        Files.createDirectories(branchesPath);
+        
+        // Create master branch with initial structure
+        Path masterPath = Paths.get(path, "branches", "master");
+        Files.createDirectories(masterPath);
+        
+        // Create versions directory
+        Path versionsPath = Paths.get(masterPath.toString(), "versions");
+        Files.createDirectories(versionsPath);
+        
+        // Initialize empty current.txt
+        Files.write(Paths.get(masterPath.toString(), "current.txt"), "".getBytes());
+        
+        // Initialize empty commit_log.txt
+        Files.write(Paths.get(masterPath.toString(), "commit_log.txt"), "".getBytes());
+        
+        return true;
+    } catch (IOException e) {
+        e.printStackTrace();
+        return false;
     }
+}
 
     public boolean createBranch(String branchName) {
     try {

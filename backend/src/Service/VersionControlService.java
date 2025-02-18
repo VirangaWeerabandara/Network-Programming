@@ -71,6 +71,28 @@ public class VersionControlService {
         }, executorService);
     }
 
+    public CompletableFuture<Map<String, Object>> createBranchAsync(String repoName, String branchName) {
+        return CompletableFuture.supplyAsync(() -> {
+            ReentrantLock lock = getRepoLock(repoName);
+            lock.lock();
+            try {
+                Repository repository = new Repository(repoName);
+                boolean created = repository.createBranch(branchName);
+                
+                Map<String, Object> result = new HashMap<>();
+                result.put("success", created);
+                if (created) {
+                    result.put("branches", repository.getBranches());
+                    String content = pullChanges(repoName, branchName);
+                    result.put("content", content != null ? content : "");
+                }
+                return result;
+            } finally {
+                lock.unlock();
+            }
+        }, executorService);
+    }
+
 public String getCommitContent(String repoName, String hash, String branchName) {
     try {
         Path versionPath = Paths.get("repositories", repoName, "branches", branchName, "versions", hash + ".txt");
@@ -140,27 +162,7 @@ public List<Map<String, String>> getCommitHistory(String repoName, String branch
     return null;
 }
 
-    public CompletableFuture<Map<String, Object>> createBranchAsync(String repoName, String branchName) {
-        return CompletableFuture.supplyAsync(() -> {
-            ReentrantLock lock = getRepoLock(repoName);
-            lock.lock();
-            try {
-                Repository repository = new Repository(repoName);
-                boolean created = repository.createBranch(branchName);
-                
-                Map<String, Object> result = new HashMap<>();
-                result.put("success", created);
-                if (created) {
-                    result.put("branches", repository.getBranches());
-                    String content = pullChanges(repoName, branchName);
-                    result.put("content", content != null ? content : "");
-                }
-                return result;
-            } finally {
-                lock.unlock();
-            }
-        }, executorService);
-    }
+
 
     public List<String> getBranches(String repoName) {
         Repository repository = new Repository(repoName);
